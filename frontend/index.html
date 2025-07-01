@@ -5,7 +5,61 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>SkillSwap Africa – Trade Your Talent</title>
   <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    .star {
+      cursor: pointer;
+      transition: color 0.2s;
+    }
+  </style>
   <script>
+    // --- App State ---
+    let profile = {
+      name: "Grace W.",
+      location: "Nairobi",
+      skillsOffered: ["Web Design", "Graphic Design"],
+      skillsWanted: ["Photography"],
+      avatar: "https://i.pravatar.cc/100?img=3",
+    };
+
+    let notifications = [
+      "New message from Samuel",
+      "Your swap was accepted!"
+    ];
+
+    let swaps = [
+      {
+        with: "Samuel O.",
+        location: "Mombasa",
+        avatar: "https://i.pravatar.cc/80?img=5",
+        offers: "Photography",
+        wants: "Web Design",
+        status: "In Progress",
+        messages: [
+          { from: "me", text: "Hi Samuel, I’ve started on your website!" },
+          { from: "them", text: "Great! I’ll send your photos tomorrow." }
+        ]
+      }
+    ];
+
+    let marketplace = [
+      {
+        name: "Samuel O.",
+        location: "Mombasa",
+        avatar: "https://i.pravatar.cc/80?img=5",
+        offers: "Photography",
+        wants: "Web Design",
+        rating: 4,
+        status: "Available"
+      },
+      // Add more users if you want!
+    ];
+
+    let review = {
+      rating: 0,
+      feedback: ""
+    };
+
+    // --- UI Functions ---
     function showSection(section) {
       const sections = [
         "home", "marketplace", "dashboard", "swap", "review"
@@ -14,14 +68,173 @@
         document.getElementById(id).style.display = (id === section) ? "block" : "none"
       );
       window.scrollTo(0,0);
+      if (section === "dashboard") renderDashboard();
+      if (section === "marketplace") renderMarketplace();
+      if (section === "swap") renderSwap();
+      if (section === "review") renderReview();
     }
-    window.onload = function() { showSection('home'); };
+
+    // -- Profile Edit Modal --
+    function openProfileModal() {
+      document.getElementById('profileModal').style.display = 'block';
+      document.getElementById('editName').value = profile.name;
+      document.getElementById('editLocation').value = profile.location;
+      document.getElementById('editSkillsOffered').value = profile.skillsOffered.join(", ");
+      document.getElementById('editSkillsWanted').value = profile.skillsWanted.join(", ");
+    }
+    function closeProfileModal() {
+      document.getElementById('profileModal').style.display = 'none';
+    }
+    function saveProfile(event) {
+      event.preventDefault();
+      profile.name = document.getElementById('editName').value;
+      profile.location = document.getElementById('editLocation').value;
+      profile.skillsOffered = document.getElementById('editSkillsOffered').value.split(',').map(s=>s.trim()).filter(Boolean);
+      profile.skillsWanted = document.getElementById('editSkillsWanted').value.split(',').map(s=>s.trim()).filter(Boolean);
+      closeProfileModal();
+      renderDashboard();
+    }
+
+    // -- Dashboard Rendering --
+    function renderDashboard() {
+      // Profile
+      document.getElementById('profileName').textContent = profile.name;
+      document.getElementById('profileLoc').textContent = profile.location;
+      document.getElementById('profileAvatar').src = profile.avatar;
+      document.getElementById('profileSkillsOffered').innerHTML = profile.skillsOffered.map(s=>`<li>${s}</li>`).join("");
+      document.getElementById('profileSkillsWanted').innerHTML = profile.skillsWanted.map(s=>`<li>${s}</li>`).join("");
+      // Notifications
+      document.getElementById('notifList').innerHTML = notifications.map(n=>`<li>${n}</li>`).join("");
+      // Ongoing Swaps (one for demo)
+      document.getElementById('swapWithName').textContent = swaps[0].with + " (" + swaps[0].offers + ")";
+      document.getElementById('swapStatus').textContent = swaps[0].status;
+    }
+
+    // -- Marketplace Rendering --
+    function renderMarketplace() {
+      let html = '';
+      for (let user of marketplace) {
+        html += `
+        <div class="bg-white rounded shadow p-4 flex flex-col items-center">
+          <img src="${user.avatar}" alt="User" class="w-16 h-16 rounded-full mb-2">
+          <div class="font-semibold mb-1">${user.name}</div>
+          <div class="text-gray-500 text-sm mb-2">${user.location}</div>
+          <div class="text-indigo-700 font-semibold mb-1">Offers: ${user.offers}</div>
+          <div class="text-gray-700 text-sm mb-2">Wants: ${user.wants}</div>
+          <div class="flex items-center text-yellow-500 mb-2">
+            ${'★'.repeat(user.rating)}${'☆'.repeat(5-user.rating)}
+          </div>
+          <div class="text-xs text-gray-400 mb-2">${user.status}</div>
+          <button onclick="showSection('swap')" class="bg-indigo-600 text-white px-4 py-1 rounded hover:bg-indigo-700">Propose Swap</button>
+        </div>
+        `;
+      }
+      document.getElementById('marketplaceList').innerHTML = html;
+    }
+
+    // -- Swap Rendering --
+    function renderSwap() {
+      // Swap details
+      document.getElementById('swapWith').textContent = swaps[0].with + " (" + swaps[0].offers + ")";
+      document.getElementById('swapOffer').textContent = swaps[0].offers + " for " + swaps[0].wants;
+      document.getElementById('swapStatusVal').textContent = swaps[0].status;
+      // Messages
+      let chatHtml = '';
+      for (let msg of swaps[0].messages) {
+        chatHtml += `<div class="mb-2"><span class="font-bold text-indigo-600">${msg.from === 'me' ? 'You' : swaps[0].with}:</span> ${msg.text}</div>`;
+      }
+      document.getElementById('chatMessages').innerHTML = chatHtml;
+    }
+    function sendMessage(event) {
+      event.preventDefault();
+      let input = document.getElementById('chatInput');
+      let val = input.value.trim();
+      if (!val) return;
+      swaps[0].messages.push({from:'me', text:val});
+      input.value = '';
+      renderSwap();
+    }
+    function completeSwap() {
+      swaps[0].status = 'Completed';
+      notifications.push("You completed a swap with " + swaps[0].with);
+      showSection('review');
+    }
+
+    // -- Review Rendering --
+    function renderReview() {
+      // Reset review
+      document.querySelectorAll('.star').forEach(star => {
+        star.style.color = "#e5e7eb"; // default gray-200
+      });
+      review.rating = 0;
+      document.getElementById('reviewText').value = "";
+    }
+    function setRating(n) {
+      review.rating = n;
+      for (let i=1; i<=5; i++) {
+        document.getElementById('star'+i).style.color = (i<=n) ? "#f59e42" : "#e5e7eb";
+      }
+    }
+    function submitReview(event) {
+      event.preventDefault();
+      review.feedback = document.getElementById('reviewText').value.trim();
+      if (review.rating === 0 || review.feedback === "") {
+        alert("Please give a rating and feedback.");
+        return;
+      }
+      notifications.push("Thanks for your review!");
+      showSection('dashboard');
+    }
+
+    // -- File Upload simulation
+    function handleFileUpload(event) {
+      event.preventDefault();
+      let file = document.getElementById('swapFile').files[0];
+      if (file) {
+        notifications.push("You sent a file: " + file.name);
+        alert("File '" + file.name + "' sent (simulated)!");
+      }
+    }
+
+    // On load, render initial dashboard & marketplace
+    window.onload = function() {
+      showSection('home');
+      renderDashboard();
+      renderMarketplace();
+    };
   </script>
 </head>
 <body class="bg-gray-100 text-gray-800">
 
+  <!-- Profile Edit Modal -->
+  <div id="profileModal" style="display:none;" class="fixed inset-0 bg-black bg-opacity-40 flex items-center justify-center z-50">
+    <form onsubmit="saveProfile(event)" class="bg-white rounded-lg shadow-lg p-6 w-11/12 max-w-md">
+      <h2 class="text-lg font-bold mb-4 text-indigo-600">Edit Profile</h2>
+      <div class="mb-2">
+        <label class="block font-semibold">Name</label>
+        <input id="editName" class="w-full border rounded px-2 py-1" required />
+      </div>
+      <div class="mb-2">
+        <label class="block font-semibold">Location</label>
+        <input id="editLocation" class="w-full border rounded px-2 py-1" required />
+      </div>
+      <div class="mb-2">
+        <label class="block font-semibold">Skills Offered (comma separated)</label>
+        <input id="editSkillsOffered" class="w-full border rounded px-2 py-1" required />
+      </div>
+      <div class="mb-2">
+        <label class="block font-semibold">Skills Wanted (comma separated)</label>
+        <input id="editSkillsWanted" class="w-full border rounded px-2 py-1" required />
+      </div>
+      <div class="flex justify-between mt-4">
+        <button type="button" onclick="closeProfileModal()" class="px-4 py-2 bg-gray-200 rounded hover:bg-gray-300">Cancel</button>
+        <button type="submit" class="px-4 py-2 bg-indigo-600 text-white rounded hover:bg-indigo-700">Save</button>
+      </div>
+    </form>
+  </div>
+
   <!-- Header -->
-  <header class="bg-white shadow">
+  <header class="bg-white shadow sticky top-0 z-40">
     <div class="max-w-7xl mx-auto px-6 py-4 flex justify-between items-center">
       <h1 class="text-xl font-bold text-indigo-600 cursor-pointer" onclick="showSection('home')">SkillSwap Africa</h1>
       <nav class="space-x-4">
@@ -124,20 +337,8 @@
           </select>
           <input type="text" placeholder="Search skills..." class="border rounded px-3 py-2 flex-1" />
         </div>
-        <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
-          <div class="bg-white rounded shadow p-4 flex flex-col items-center">
-            <img src="https://i.pravatar.cc/80?img=5" alt="User" class="w-16 h-16 rounded-full mb-2">
-            <div class="font-semibold mb-1">Samuel O.</div>
-            <div class="text-gray-500 text-sm mb-2">Mombasa</div>
-            <div class="text-indigo-700 font-semibold mb-1">Offers: Photography</div>
-            <div class="text-gray-700 text-sm mb-2">Wants: Web Design</div>
-            <div class="flex items-center text-yellow-500 mb-2">
-              ★★★★☆
-            </div>
-            <div class="text-xs text-gray-400 mb-2">Available</div>
-            <button onclick="showSection('swap')" class="bg-indigo-600 text-white px-4 py-1 rounded hover:bg-indigo-700">Propose Swap</button>
-          </div>
-          <!-- Add more cards as needed -->
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-6" id="marketplaceList">
+          <!-- Cards rendered by JS -->
         </div>
       </div>
     </section>
@@ -150,40 +351,32 @@
         <!-- Profile -->
         <section class="bg-white rounded shadow p-6">
           <h2 class="font-bold text-xl mb-4 text-indigo-600">My Profile</h2>
-          <img src="https://i.pravatar.cc/100?img=3" alt="Profile" class="w-20 h-20 rounded-full mx-auto mb-4">
-          <div class="mb-2 text-center font-semibold">Grace W.</div>
-          <div class="mb-2 text-center text-gray-500">Nairobi</div>
+          <img id="profileAvatar" src="" alt="Profile" class="w-20 h-20 rounded-full mx-auto mb-4">
+          <div id="profileName" class="mb-2 text-center font-semibold"></div>
+          <div id="profileLoc" class="mb-2 text-center text-gray-500"></div>
           <div class="mb-2">
             <div class="font-semibold">Skills Offered:</div>
-            <ul class="list-disc list-inside text-gray-700">
-              <li>Web Design</li>
-              <li>Graphic Design</li>
-            </ul>
+            <ul class="list-disc list-inside text-gray-700" id="profileSkillsOffered"></ul>
           </div>
           <div class="mb-2">
             <div class="font-semibold">Skills Wanted:</div>
-            <ul class="list-disc list-inside text-gray-700">
-              <li>Photography</li>
-            </ul>
+            <ul class="list-disc list-inside text-gray-700" id="profileSkillsWanted"></ul>
           </div>
-          <button class="bg-indigo-600 text-white w-full py-2 rounded mt-4 hover:bg-indigo-700">Edit Profile</button>
+          <button onclick="openProfileModal()" class="bg-indigo-600 text-white w-full py-2 rounded mt-4 hover:bg-indigo-700">Edit Profile</button>
         </section>
         <!-- Ongoing Swaps -->
         <section class="bg-white rounded shadow p-6 md:col-span-2">
           <h2 class="font-bold text-xl mb-4 text-indigo-600">Ongoing Swaps</h2>
           <div class="mb-4">
             <div class="flex justify-between mb-2">
-              <span class="font-semibold">With Samuel (Photography)</span>
-              <span class="text-xs bg-yellow-200 text-yellow-900 rounded px-2 py-1">In Progress</span>
+              <span id="swapWithName" class="font-semibold"></span>
+              <span id="swapStatus" class="text-xs bg-yellow-200 text-yellow-900 rounded px-2 py-1"></span>
             </div>
             <button onclick="showSection('swap')" class="text-indigo-700 hover:underline text-sm">View Details & Chat</button>
           </div>
           <hr>
           <h2 class="font-bold text-lg mt-6 mb-2 text-indigo-600">Notifications</h2>
-          <ul class="list-disc list-inside text-gray-700">
-            <li>New message from Samuel</li>
-            <li>Your swap was accepted!</li>
-          </ul>
+          <ul class="list-disc list-inside text-gray-700" id="notifList"></ul>
         </section>
       </div>
     </section>
@@ -193,34 +386,31 @@
   <div id="swap" style="display:none">
     <section class="py-16">
       <div class="max-w-6xl mx-auto px-6">
-        <h2 class="text-3xl font-bold text-indigo-600 mb-8">Swap with Samuel O. (Photography)</h2>
+        <h2 class="text-3xl font-bold text-indigo-600 mb-8">Swap with <span id="swapWith"></span></h2>
         <div class="grid md:grid-cols-2 gap-8">
           <!-- Swap Details -->
           <section class="bg-white rounded shadow p-6">
             <div class="mb-4">
               <span class="block font-semibold text-gray-700 mb-2">Your Offer</span>
-              <div class="bg-indigo-100 p-2 rounded mb-2">Web Design for Samuel's Photography</div>
+              <div class="bg-indigo-100 p-2 rounded mb-2" id="swapOffer"></div>
             </div>
             <div class="mb-4">
               <span class="block font-semibold text-gray-700 mb-2">Status</span>
-              <span class="text-xs bg-yellow-200 text-yellow-900 rounded px-2 py-1">In Progress</span>
+              <span id="swapStatusVal" class="text-xs bg-yellow-200 text-yellow-900 rounded px-2 py-1"></span>
             </div>
-            <form class="mb-4">
+            <form class="mb-4" onsubmit="handleFileUpload(event)">
               <label class="block mb-2 font-semibold">Upload Project File</label>
-              <input type="file" class="block w-full text-gray-700 mb-2"/>
+              <input id="swapFile" type="file" class="block w-full text-gray-700 mb-2"/>
               <button type="submit" class="bg-indigo-600 text-white px-4 py-2 rounded hover:bg-indigo-700">Send File</button>
             </form>
-            <button onclick="showSection('review')" class="bg-indigo-600 text-white px-4 py-2 rounded hover:bg-indigo-700">Complete Swap</button>
+            <button onclick="completeSwap()" class="bg-indigo-600 text-white px-4 py-2 rounded hover:bg-indigo-700">Complete Swap</button>
           </section>
           <!-- Chat Section -->
           <section class="bg-white rounded shadow p-6 flex flex-col">
             <h2 class="font-bold text-lg mb-4 text-indigo-600">Chat</h2>
-            <div class="flex-1 mb-4 overflow-y-auto h-40">
-              <div class="mb-2"><span class="font-bold text-indigo-600">You:</span> Hi Samuel, I’ve started on your website!</div>
-              <div class="mb-2"><span class="font-bold text-indigo-600">Samuel:</span> Great! I’ll send your photos tomorrow.</div>
-            </div>
-            <form class="flex">
-              <input type="text" placeholder="Type your message..." class="border rounded-l px-3 py-2 flex-1"/>
+            <div id="chatMessages" class="flex-1 mb-4 overflow-y-auto h-40"></div>
+            <form class="flex" onsubmit="sendMessage(event)">
+              <input id="chatInput" type="text" placeholder="Type your message..." class="border rounded-l px-3 py-2 flex-1"/>
               <button type="submit" class="bg-indigo-600 text-white px-4 py-2 rounded-r hover:bg-indigo-700">Send</button>
             </form>
           </section>
@@ -234,20 +424,20 @@
     <section class="py-16">
       <div class="max-w-2xl mx-auto px-6">
         <h2 class="text-3xl font-bold text-indigo-600 mb-8">Leave a Review</h2>
-        <form class="bg-white rounded shadow p-6">
+        <form class="bg-white rounded shadow p-6" onsubmit="submitReview(event)">
           <div class="mb-4">
             <label class="block font-semibold mb-2">Rate Your Experience</label>
             <div class="flex">
-              <input type="radio" name="rating" id="star5" class="hidden" /><label for="star5" class="text-yellow-400 text-2xl cursor-pointer mr-2">★</label>
-              <input type="radio" name="rating" id="star4" class="hidden" /><label for="star4" class="text-yellow-400 text-2xl cursor-pointer mr-2">★</label>
-              <input type="radio" name="rating" id="star3" class="hidden" /><label for="star3" class="text-yellow-400 text-2xl cursor-pointer mr-2">★</label>
-              <input type="radio" name="rating" id="star2" class="hidden" /><label for="star2" class="text-yellow-400 text-2xl cursor-pointer mr-2">★</label>
-              <input type="radio" name="rating" id="star1" class="hidden" /><label for="star1" class="text-yellow-400 text-2xl cursor-pointer">★</label>
+              <span id="star1" class="star text-2xl mr-2" onclick="setRating(1)">★</span>
+              <span id="star2" class="star text-2xl mr-2" onclick="setRating(2)">★</span>
+              <span id="star3" class="star text-2xl mr-2" onclick="setRating(3)">★</span>
+              <span id="star4" class="star text-2xl mr-2" onclick="setRating(4)">★</span>
+              <span id="star5" class="star text-2xl" onclick="setRating(5)">★</span>
             </div>
           </div>
           <div class="mb-4">
             <label class="block font-semibold mb-2">Your Feedback</label>
-            <textarea class="w-full border rounded px-3 py-2" rows="4" placeholder="Share your experience..."></textarea>
+            <textarea id="reviewText" class="w-full border rounded px-3 py-2" rows="4" placeholder="Share your experience..."></textarea>
           </div>
           <button type="submit" class="bg-indigo-600 text-white px-6 py-2 rounded hover:bg-indigo-700 w-full">Submit Review</button>
         </form>
